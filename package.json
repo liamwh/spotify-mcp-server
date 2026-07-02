@@ -2,29 +2,45 @@
   "type": "module",
   "name": "spotify-mcp-server",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "./build/index.js",
   "bin": {
-    "spotify-mcp": "./build/index.js"
+    "spotify-mcp": "./build/index.js",
+    "spotify-mcp-http": "./build/http.js"
   },
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755'); require('fs').chmodSync('build/http.js', '755')\"",
+    "start": "node build/index.js",
+    "start:http": "node build/http.js",
     "auth": "tsc && node build/auth.js",
     "lint": "biome check --diagnostic-level=warn --error-on-warnings",
     "lint:fix": "biome check --write --unsafe --organize-imports-enabled=true",
     "typecheck": "tsc --noEmit"
   },
-  "files": ["build"],
-  "keywords": [],
+  "files": [
+    "build"
+  ],
+  "keywords": [
+    "mcp",
+    "spotify",
+    "model-context-protocol"
+  ],
   "author": "Marcel Marais",
   "description": "A Model Context Protocol server for Spotify integration",
+  "engines": {
+    "node": ">=22 <25"
+  },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.10.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@spotify/web-api-ts-sdk": "^1.2.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "open": "^10.1.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "@types/node": "^22.13.8",
     "typescript": "^5.8.2"
   }

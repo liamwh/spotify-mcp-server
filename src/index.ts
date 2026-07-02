@@ -1,41 +1,52 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { albumTools } from './albums.js';
-import { playTools } from './play.js';
-import { playlistTools } from './playlist.js';
-import { readTools } from './read.js';
-import { createSpotifyApi } from './utils.js';
+#!/usr/bin/env node
 
-const server = new McpServer({
-  name: 'spotify-controller',
-  version: '1.0.0',
-});
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  createSpotifyMcpServer,
+  startSpotifyTokenRefreshScheduler,
+} from "./server.js";
 
-[...readTools, ...playTools, ...albumTools, ...playlistTools].forEach(
-  (tool) => {
-    server.tool(tool.name, tool.description, tool.schema, tool.handler);
-  },
-);
-
-// Proactively refresh the Spotify token every 45 minutes so it never
-// expires mid-session (tokens last 60 minutes; this keeps a safe buffer).
-setInterval(
-  async () => {
-    try {
-      await createSpotifyApi();
-    } catch {
-      // Errors will surface on the next tool call; nothing actionable here.
-    }
-  },
-  45 * 60 * 1000,
-);
-
-async function main() {
+/**
+ * Runs the Spotify MCP server using the stdio transport.
+ */
+async function main(): Promise<void> {
+  const stopTokenRefresh = startSpotifyTokenRefreshScheduler();
+  const server = createSpotifyMcpServer();
   const transport = new StdioServerTransport();
+
+  const shutdown = async (): Promise<void> => {
+    stopTokenRefresh();
+
+    try {
+      await server.close();
+    } catch (error: unknown) {
+      console.error(
+        "Failed to close Spotify MCP server cleanly:",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  };
+
+  process.once("SIGINT", () => {
+    void shutdown().finally(() => {
+      process.exit(0);
+    });
+  });
+
+  process.once("SIGTERM", () => {
+    void shutdown().finally(() => {
+      process.exit(0);
+    });
+  });
+
   await server.connect(transport);
 }
 
-main().catch((error) => {
-  console.error('Fatal error in main():', error);
-  process.exit(1);
+main().catch((error: unknown) => {
+  console.error(
+    "Fatal error in Spotify MCP stdio server:",
+    error instanceof Error ? (error.stack ?? error.message) : String(error),
+  );
+
+  process.exitCode = 1;
 });
