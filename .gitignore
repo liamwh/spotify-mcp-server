@@ -6,3 +6,7 @@ spotify-config.json
 build
 dist
 .DS_Store
+
+# Local-only helper scripts (kept on disk, intentionally not tracked).
+scripts/copy-files.py
+scripts/input-file.txt
