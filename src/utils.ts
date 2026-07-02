@@ -8,7 +8,12 @@ import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import open from 'open';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CONFIG_FILE = path.join(__dirname, '../spotify-config.json');
+// Overrideable so a container can mount a writable persistent volume (the app
+// writes refreshed tokens back here via saveSpotifyConfig). Defaults to the
+// repo-root file next to the compiled build directory.
+const CONFIG_FILE =
+  process.env.SPOTIFY_CONFIG_PATH ??
+  path.join(__dirname, '../spotify-config.json');
 
 export interface SpotifyConfig {
   clientId: string;

@@ -1,9 +1,9 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { albumTools } from "./albums.js";
-import { playTools } from "./play.js";
-import { playlistTools } from "./playlist.js";
-import { readTools } from "./read.js";
-import { createSpotifyApi } from "./utils.js";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { albumTools } from './albums.js';
+import { playTools } from './play.js';
+import { playlistTools } from './playlist.js';
+import { readTools } from './read.js';
+import { createSpotifyApi } from './utils.js';
 
 const TOKEN_REFRESH_INTERVAL_MS = 45 * 60 * 1000;
 
@@ -15,8 +15,8 @@ const TOKEN_REFRESH_INTERVAL_MS = 45 * 60 * 1000;
  */
 export function createSpotifyMcpServer(): McpServer {
   const server = new McpServer({
-    name: "spotify-controller",
-    version: "1.0.0",
+    name: 'spotify-controller',
+    version: '1.0.0',
   });
 
   for (const spotifyTool of readTools) {
@@ -68,7 +68,7 @@ export function startSpotifyTokenRefreshScheduler(): () => void {
   const timer = setInterval(() => {
     void createSpotifyApi().catch((error: unknown) => {
       console.error(
-        "Proactive Spotify access-token refresh failed:",
+        'Proactive Spotify access-token refresh failed:',
         error instanceof Error ? error.message : String(error),
       );
     });

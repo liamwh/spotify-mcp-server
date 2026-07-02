@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   createSpotifyMcpServer,
   startSpotifyTokenRefreshScheduler,
-} from "./server.js";
+} from './server.js';
 
 /**
  * Runs the Spotify MCP server using the stdio transport.
@@ -21,19 +21,19 @@ async function main(): Promise<void> {
       await server.close();
     } catch (error: unknown) {
       console.error(
-        "Failed to close Spotify MCP server cleanly:",
+        'Failed to close Spotify MCP server cleanly:',
         error instanceof Error ? error.message : String(error),
       );
     }
   };
 
-  process.once("SIGINT", () => {
+  process.once('SIGINT', () => {
     void shutdown().finally(() => {
       process.exit(0);
     });
   });
 
-  process.once("SIGTERM", () => {
+  process.once('SIGTERM', () => {
     void shutdown().finally(() => {
       process.exit(0);
     });
@@ -44,7 +44,7 @@ async function main(): Promise<void> {
 
 main().catch((error: unknown) => {
   console.error(
-    "Fatal error in Spotify MCP stdio server:",
+    'Fatal error in Spotify MCP stdio server:',
     error instanceof Error ? (error.stack ?? error.message) : String(error),
   );
 

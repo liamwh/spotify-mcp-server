@@ -16,14 +16,8 @@
     "lint:fix": "biome check --write --unsafe --organize-imports-enabled=true",
     "typecheck": "tsc --noEmit"
   },
-  "files": [
-    "build"
-  ],
-  "keywords": [
-    "mcp",
-    "spotify",
-    "model-context-protocol"
-  ],
+  "files": ["build"],
+  "keywords": ["mcp", "spotify", "model-context-protocol"],
   "author": "Marcel Marais",
   "description": "A Model Context Protocol server for Spotify integration",
   "engines": {

@@ -1,0 +1,23 @@
+# Build artifacts and dependencies — rebuilt inside the image.
+node_modules
+build
+
+# Secrets. These must NEVER be copied into the image.
+.env
+spotify-config.json
+
+# VCS, editor and local tooling.
+.git
+.github
+.claude
+.nwave
+.vscode
+.DS_Store
+**/.DS_Store
+
+# Not needed at runtime.
+scripts
+*.md
+justfile
+biome.jsonc
+spotify-config.example.json

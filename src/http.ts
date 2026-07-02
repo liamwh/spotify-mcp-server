@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
+import crypto from 'node:crypto';
 import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import cors from 'cors';
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import {
   createSpotifyMcpServer,
   startSpotifyTokenRefreshScheduler,
@@ -12,6 +13,7 @@ import {
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 8001;
 const MCP_PATH = '/mcp';
+const BASIC_AUTH_REALM = 'spotify-mcp';
 
 /**
  * Parses a positive TCP port number from an environment variable.
@@ -30,6 +32,91 @@ function parsePort(value: string | undefined): number {
   }
 
   return port;
+}
+
+/**
+ * HTTP Basic auth guard for the MCP endpoint.
+ *
+ * Enabled only when both MCP_BASIC_AUTH_USER and MCP_BASIC_AUTH_PASSWORD are set
+ * (the deployed server behind the reverse proxy). With neither set — local
+ * development — the middleware is a no-op so the server stays open on localhost.
+ *
+ * The MCP client authenticates by sending `Authorization: Basic base64(user:pw)`.
+ * Comparison is constant-time to avoid timing-based credential discovery.
+ */
+function requireBasicAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  const expectedUser = process.env.MCP_BASIC_AUTH_USER;
+  const expectedPassword = process.env.MCP_BASIC_AUTH_PASSWORD;
+
+  // No credentials configured -> auth disabled (local dev only).
+  if (!(expectedUser && expectedPassword)) {
+    next();
+    return;
+  }
+
+  const deny = (): void => {
+    res.setHeader(
+      'WWW-Authenticate',
+      `Basic realm="${BASIC_AUTH_REALM}", charset="UTF-8"`,
+    );
+    res.status(401).json({
+      jsonrpc: '2.0',
+      error: { code: -32001, message: 'Unauthorized' },
+      id: null,
+    });
+  };
+
+  const header = req.headers.authorization;
+  if (!header?.toLowerCase().startsWith('basic ')) {
+    deny();
+    return;
+  }
+
+  let provided: string;
+  try {
+    provided = Buffer.from(
+      header.slice('basic '.length).trim(),
+      'base64',
+    ).toString('utf8');
+  } catch {
+    deny();
+    return;
+  }
+
+  const separatorIndex = provided.indexOf(':');
+  if (separatorIndex === -1) {
+    deny();
+    return;
+  }
+
+  const providedUser = provided.slice(0, separatorIndex);
+  const providedPassword = provided.slice(separatorIndex + 1);
+
+  // timingSafeEqual throws on mismatched lengths, so guard each comparison and
+  // only call it when the lengths already match.
+  const userMatches =
+    providedUser.length === expectedUser.length &&
+    crypto.timingSafeEqual(
+      Buffer.from(providedUser),
+      Buffer.from(expectedUser),
+    );
+  const passwordMatches =
+    providedPassword.length === expectedPassword.length &&
+    crypto.timingSafeEqual(
+      Buffer.from(providedPassword),
+      Buffer.from(expectedPassword),
+    );
+
+  if (userMatches && passwordMatches) {
+    next();
+    return;
+  }
+
+  deny();
 }
 
 /**
@@ -99,7 +186,7 @@ async function main(): Promise<void> {
     });
   });
 
-  app.all(MCP_PATH, async (req: Request, res: Response) => {
+  app.all(MCP_PATH, requireBasicAuth, async (req: Request, res: Response) => {
     const server = createSpotifyMcpServer();
 
     /*
@@ -151,7 +238,7 @@ async function main(): Promise<void> {
     } catch (error: unknown) {
       console.error(
         'Spotify MCP HTTP request failed:',
-        error instanceof Error ? error.stack ?? error.message : String(error),
+        error instanceof Error ? (error.stack ?? error.message) : String(error),
       );
 
       writeInternalError(res);
@@ -214,7 +301,7 @@ async function main(): Promise<void> {
 main().catch((error: unknown) => {
   console.error(
     'Fatal error in Spotify MCP HTTP server:',
-    error instanceof Error ? error.stack ?? error.message : String(error),
+    error instanceof Error ? (error.stack ?? error.message) : String(error),
   );
 
   process.exitCode = 1;
