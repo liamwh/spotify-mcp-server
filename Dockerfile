@@ -25,18 +25,20 @@ COPY --from=build /app/build ./build
 COPY package.json ./
 
 # Bind on all interfaces inside the container; the reverse proxy fronts it.
+# Default PORT=3000 matches Coolify's convention (Coolify injects PORT=3000 at
+# runtime anyway). The healthcheck reads PORT so it stays correct if overridden.
 # Spotify config lives on a mounted persistent volume (/data) so refreshed
 # tokens survive restarts. Basic auth is enabled by setting MCP_BASIC_AUTH_*.
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
-    PORT=8001 \
+    PORT=3000 \
     SPOTIFY_CONFIG_PATH=/data/spotify-config.json
 
 RUN mkdir -p /data
 
-EXPOSE 8001
+EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD bun -e "fetch('http://127.0.0.1:8001/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD bun -e "fetch('http://127.0.0.1:'+(process.env.PORT||'3000')+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["bun", "build/http.js"]
